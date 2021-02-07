@@ -84,6 +84,7 @@ class WebsiteCheck:
             'code': self.code,
             'valid': self.valid,
             'regex': self.regex.pattern if self.regex else None,
+            'url': self.url,
         }
 
 
