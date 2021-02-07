@@ -27,12 +27,20 @@ class WebsiteCheck:
     def __init__(self, url, regex=None):
         '''
         :param url: The url to check.
-        :param regex: A raw string containing the regular expression to check.
+        :param regex: A raw string containing the regular expression to check
+        or a re.Pattern object.
         '''
 
         self.url = url
         self.datetime = datetime.datetime.now()
-        self.regex = re.compile(regex) if regex else None
+
+        if isinstance(regex, re.Pattern):
+            self.regex = regex
+        elif regex:
+            self.regex = re.compile(regex)
+        else:
+            self.regex = None
+
         self.time = 0
         self.code = 500
         self.response = None
@@ -55,6 +63,6 @@ class WebsiteCheck:
         # if we've the regex the valid status is set to true just if the
         # regular expression matches the content
         if self.regex:
-            self.valid = self.regex.match(self.response.text)
+            self.valid = bool(self.regex.search(self.response.text))
 
         return self.response
