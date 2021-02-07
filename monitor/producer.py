@@ -83,7 +83,7 @@ class WebsiteCheck:
             'time': self.time.microseconds,
             'code': self.code,
             'valid': self.valid,
-            'regex': str(self.regex) if self.regex else None,
+            'regex': self.regex.pattern if self.regex else None,
         }
 
 
