@@ -19,14 +19,23 @@
 
 import argparse
 import datetime
+import json
 import re
 import requests
 import sys
 import time
 
+from kafka import KafkaProducer
 
+
+# TODO: move the config to its own module to be able to share with consumer
 class Config:
     timeout = 5
+    kafka_service = 'kafka-14341989-danigm-893f.aivencloud.com:19869'
+    kafka_topic = 'website-check'
+    kafka_cert = 'service.cert'
+    kafka_key = 'service.key'
+    kafka_ca = 'ca.pem'
 
 
 class WebsiteCheck:
@@ -75,8 +84,18 @@ class WebsiteCheck:
 
         return self.response
 
+    @property
+    def serialized(self):
+        return {
+            'request_time': self.request_time.isoformat(),
+            'time': self.time.microseconds,
+            'code': self.code,
+            'valid': self.valid,
+            'regex': str(self.regex) if self.regex else None,
+        }
 
-def do_request(websites):
+
+def do_request(websites, producer):
     '''
     Do the request for each websites
 
@@ -96,10 +115,21 @@ def do_request(websites):
             print(f'\033[1;31m{e}\033[0;0m', file=sys.stderr)
             all_ok = False
         else:
+            # Send to kafka topic
+            future = producer.send(Config.kafka_topic, check.serialized)
+
+            def err_cb(excp):
+                print(f'\033[1;31mKafka: {excp}\033[0;0m', file=sys.stderr)
+            future.add_errback(err_cb)
+
             date = datetime.datetime.now().ctime()
-            info = f'[{date}]: Request {check.code} -> {check.valid} {check.url}'
+            info = (
+                f'[{date}]: Request {check.code} -> {check.valid} '
+                f'{check.url}'
+            )
             print(f'\033[1;34m{info}\033[0;0m', file=sys.stdout)
 
+    producer.flush()
     return all_ok
 
 
@@ -130,16 +160,24 @@ if __name__ == '__main__':
         Config.timeout = args.timeout
 
     websites = [WebsiteCheck(u, regex=args.regex) for u in args.url]
+    producer = KafkaProducer(
+        bootstrap_servers=Config.kafka_service,
+        ssl_certfile=Config.kafka_cert,
+        ssl_keyfile=Config.kafka_key,
+        ssl_cafile=Config.kafka_ca,
+        security_protocol='SSL',
+        value_serializer=lambda m: json.dumps(m).encode('ascii'),
+    )
 
     # no monitor, just one time
     if not args.monitor:
-        response = do_request(websites)
+        response = do_request(websites, producer)
         sys.exit(0 if response else 1)
 
     # Periodic check every args.monitor seconds
     try:
         while True:
-            do_request(websites)
+            do_request(websites, producer)
             time.sleep(args.monitor)
     except KeyboardInterrupt:
         sys.exit(0)

@@ -1,2 +1,6 @@
 *.swp
 *.py[cod]
+
+ca.pem
+service.cert
+service.key

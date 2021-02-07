@@ -5,6 +5,7 @@ name = "pypi"
 
 [packages]
 requests = "*"
+kafka-python = "*"
 
 [dev-packages]
 flake8 = "*"
