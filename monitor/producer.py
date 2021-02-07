@@ -103,7 +103,8 @@ if __name__ == '__main__':
 
     # no monitor, just one time
     if not args.monitor:
-        sys.exit(do_request(check))
+        response = do_request(check)
+        sys.exit(0 if response else 1)
 
     # Periodic check every args.monitor seconds
     try:
