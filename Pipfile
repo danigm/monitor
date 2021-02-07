@@ -11,6 +11,3 @@ psycopg2 = "*"
 [dev-packages]
 flake8 = "*"
 requests-mock = "*"
-
-[requires]
-python_version = "3.8"
