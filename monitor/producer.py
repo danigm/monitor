@@ -72,26 +72,39 @@ class WebsiteCheck:
         return self.response
 
 
-def do_request(check):
-    try:
-        check.request()
-        date = datetime.datetime.now().ctime()
-        info = f'[{date}]: Request {check.code} -> {check.valid} {check.url}'
-        print(f'\033[1;34m{info}\033[0;0m', file=sys.stdout)
-    except requests.exceptions.RequestException as e:
-        # The error in red in error output
-        print(f'\033[1;31m{e}\033[0;0m', file=sys.stderr)
-        return False
+def do_request(websites):
+    '''
+    Do the request for each websites
 
-    return True
+    :param websites: The websites to check, it should be an iterable of
+    :class:`WebsiteCheck <WebsiteCheck>`
+
+    Returns: True if all requests are done correctly, otherwise returns False.
+    '''
+
+    all_ok = True
+
+    for check in websites:
+        try:
+            check.request()
+        except requests.exceptions.RequestException as e:
+            # The error in red in error output
+            print(f'\033[1;31m{e}\033[0;0m', file=sys.stderr)
+            all_ok = False
+        else:
+            date = datetime.datetime.now().ctime()
+            info = f'[{date}]: Request {check.code} -> {check.valid} {check.url}'
+            print(f'\033[1;34m{info}\033[0;0m', file=sys.stdout)
+
+    return all_ok
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Monitor a website.')
 
     parser.add_argument(
-        'url',
-        help='The website to monitor. Use the full url, '
+        'url', nargs='+',
+        help='The websites to monitor. Use the full url, '
         'for example http://github.com')
 
     parser.add_argument(
@@ -104,17 +117,17 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    check = WebsiteCheck(args.url, regex=args.regex)
+    websites = [WebsiteCheck(u, regex=args.regex) for u in args.url]
 
     # no monitor, just one time
     if not args.monitor:
-        response = do_request(check)
+        response = do_request(websites)
         sys.exit(0 if response else 1)
 
     # Periodic check every args.monitor seconds
     try:
         while True:
-            do_request(check)
+            do_request(websites)
             time.sleep(args.monitor)
     except KeyboardInterrupt:
         sys.exit(0)
