@@ -74,9 +74,10 @@ class WebsiteCheck:
 
 def do_request(check):
     try:
-        info = f'[{datetime.datetime.now().ctime()}]: Request {check.url}'
-        print(f'\033[1;34m{info}\033[0;0m', file=sys.stdout)
         check.request()
+        date = datetime.datetime.now().ctime()
+        info = f'[{date}]: Request {check.code} -> {check.valid} {check.url}'
+        print(f'\033[1;34m{info}\033[0;0m', file=sys.stdout)
     except requests.exceptions.RequestException as e:
         # The error in red in error output
         print(f'\033[1;31m{e}\033[0;0m', file=sys.stderr)
@@ -97,9 +98,13 @@ if __name__ == '__main__':
         '-m', '--monitor', type=int, default=0,
         help='Run this as daemon, making the check every MONITOR seconds')
 
+    parser.add_argument(
+        '-r', '--regex', type=str, default='',
+        help='Regular expression to check if it is in the page contents')
+
     args = parser.parse_args()
 
-    check = WebsiteCheck(args.url)
+    check = WebsiteCheck(args.url, regex=args.regex)
 
     # no monitor, just one time
     if not args.monitor:
