@@ -25,6 +25,10 @@ import sys
 import time
 
 
+class Config:
+    timeout = 5
+
+
 class WebsiteCheck:
 
     def __init__(self, url, regex=None):
@@ -59,7 +63,7 @@ class WebsiteCheck:
         '''
 
         self.request_time = datetime.datetime.now()
-        self.response = requests.get(self.url)
+        self.response = requests.get(self.url, timeout=Config.timeout)
         self.time = self.response.elapsed
         self.code = self.response.status_code
         self.valid = True
@@ -115,7 +119,15 @@ if __name__ == '__main__':
         '-r', '--regex', type=str, default='',
         help='Regular expression to check if it is in the page contents')
 
+    parser.add_argument(
+        '-t', '--timeout', type=float, default=5.0,
+        help='Connection timeout in seconds. You can use float point here, '
+        'for example 0.005 for 5 milisecond')
+
     args = parser.parse_args()
+
+    if args.timeout:
+        Config.timeout = args.timeout
 
     websites = [WebsiteCheck(u, regex=args.regex) for u in args.url]
 
