@@ -35,3 +35,5 @@ uses these files to authenticate:
     * service.key
 
 So you need to create those files to make this work.
+
+You can change the default configuration editing the `config.ini` file.

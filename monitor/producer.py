@@ -27,15 +27,7 @@ import time
 
 from kafka import KafkaProducer
 
-
-# TODO: move the config to its own module to be able to share with consumer
-class Config:
-    timeout = 5
-    kafka_service = 'kafka-14341989-danigm-893f.aivencloud.com:19869'
-    kafka_topic = 'website-check'
-    kafka_cert = 'service.cert'
-    kafka_key = 'service.key'
-    kafka_ca = 'ca.pem'
+from .config import Config
 
 
 class WebsiteCheck:
@@ -150,12 +142,17 @@ if __name__ == '__main__':
         help='Regular expression to check if it is in the page contents')
 
     parser.add_argument(
-        '-t', '--timeout', type=float, default=5.0,
+        '-t', '--timeout', type=float,
         help='Connection timeout in seconds. You can use float point here, '
         'for example 0.005 for 5 milisecond')
 
+    parser.add_argument(
+        '-c', '--config', type=str, default='config.ini',
+        help='Configuration file.')
+
     args = parser.parse_args()
 
+    Config.init(args.config)
     if args.timeout:
         Config.timeout = args.timeout
 
