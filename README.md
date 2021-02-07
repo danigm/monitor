@@ -26,7 +26,18 @@ This script writes some small log information to the stdout and stderr so if
 it's wrapped with a systemd service the output could be visible with
 journalctl.
 
-### Configure
+## Consumer
+
+The consumer is a script that consume the kafka topic and stores the received
+information in the postgresql database.
+
+The consumer can be run with the following command:
+
+```
+python -m monitor.consumer
+```
+
+## Configure
 
 To make it work you need a kafka instance with a kafka topic. By default it
 uses these files to authenticate:
