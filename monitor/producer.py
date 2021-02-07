@@ -17,9 +17,12 @@
 #
 
 
+import argparse
 import datetime
 import re
 import requests
+import sys
+import time
 
 
 class WebsiteCheck:
@@ -32,7 +35,7 @@ class WebsiteCheck:
         '''
 
         self.url = url
-        self.datetime = datetime.datetime.now()
+        self.request_time = None
 
         if isinstance(regex, re.Pattern):
             self.regex = regex
@@ -55,6 +58,7 @@ class WebsiteCheck:
         the same exceptions.
         '''
 
+        self.request_time = datetime.datetime.now()
         self.response = requests.get(self.url)
         self.time = self.response.elapsed
         self.code = self.response.status_code
@@ -66,3 +70,45 @@ class WebsiteCheck:
             self.valid = bool(self.regex.search(self.response.text))
 
         return self.response
+
+
+def do_request(check):
+    try:
+        info = f'[{datetime.datetime.now().ctime()}]: Request {check.url}'
+        print(f'\033[1;34m{info}\033[0;0m', file=sys.stdout)
+        check.request()
+    except requests.exceptions.RequestException as e:
+        # The error in red in error output
+        print(f'\033[1;31m{e}\033[0;0m', file=sys.stderr)
+        return False
+
+    return True
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Monitor a website.')
+
+    parser.add_argument(
+        'url',
+        help='The website to monitor. Use the full url, '
+        'for example http://github.com')
+
+    parser.add_argument(
+        '-m', '--monitor', type=int, default=0,
+        help='Run this as daemon, making the check every MONITOR seconds')
+
+    args = parser.parse_args()
+
+    check = WebsiteCheck(args.url)
+
+    # no monitor, just one time
+    if not args.monitor:
+        sys.exit(do_request(check))
+
+    # Periodic check every args.monitor seconds
+    try:
+        while True:
+            do_request(check)
+            time.sleep(args.monitor)
+    except KeyboardInterrupt:
+        sys.exit(0)
