@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 requests = "*"
 kafka-python = "*"
+psycopg2 = "*"
 
 [dev-packages]
 flake8 = "*"

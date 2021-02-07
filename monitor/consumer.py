@@ -23,8 +23,46 @@ import json
 import sys
 
 from kafka import KafkaConsumer
+import psycopg2
 
 from .config import Config
+
+
+def create_table_if_not_exists(db):
+    cur = db.cursor()
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS websites (
+            url varchar(512) NOT NULL,
+            datetime timestamp NOT NULL,
+            time int NOT NULL,
+            code int NOT NULL,
+            regex varchar(256),
+            valid boolean,
+            PRIMARY KEY (url, datetime)
+        );
+    ''')
+    db.commit()
+
+
+def store(db, data):
+    time = data['time']  # time in microseconds
+    code = data['code']
+    isoformat = data['request_time']
+    request_time = datetime.datetime.fromisoformat(isoformat)
+    valid = data['valid']
+    regex = data['regex']
+    url = data['url']
+
+    cur = db.cursor()
+
+    cur.execute('''
+        INSERT INTO websites (
+            url, datetime, time, code, regex, valid
+        ) VALUES (%s, %s, %s, %s, %s, %s);
+    ''', (url, request_time, time, code, regex, valid))
+
+    db.commit()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -37,6 +75,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     Config.init(args.config)
+
+    db = psycopg2.connect(Config.postgresql)
+    create_table_if_not_exists(db)
 
     consumer = KafkaConsumer(
         Config.kafka_topic,
@@ -53,16 +94,7 @@ if __name__ == '__main__':
         for msg in consumer:
             data = msg.value
             print(f'\033[1;34m{data}\033[0;0m')
-
-            time = data['time']  # time in microseconds
-            code = data['code']
-            isoformat = data['request_time']
-            request_time = datetime.datetime.fromisoformat(isoformat)
-            valid = data['valid']
-            regex = data['regex']
-            url = data['url']
-
-            # TODO: store this in postgersql db
+            store(db, data)
 
     except KeyboardInterrupt:
         sys.exit(0)

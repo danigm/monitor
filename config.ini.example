@@ -5,3 +5,4 @@ kafka_topic=website-check
 kafka_cert=service.cert
 kafka_key=service.key
 kafka_ca=ca.pem
+postgresql=postgres://user:PASSWD@localhost:5432/defaultdb

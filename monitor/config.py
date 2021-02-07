@@ -25,6 +25,7 @@ class Config:
     kafka_cert = 'service.cert'
     kafka_key = 'service.key'
     kafka_ca = 'ca.pem'
+    postgresql = 'postgres://user:passwd@localhost:5432/db'
 
     @classmethod
     def init(cls, filename='config.ini'):
