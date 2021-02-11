@@ -17,12 +17,18 @@
 #
 
 
+import io
+import json
 import re
 import requests
 import requests_mock
 import unittest
+from unittest.mock import patch
 
 from ..producer import WebsiteCheck
+from ..producer import do_request
+
+from .kafkamocks import MockProducer
 
 
 LOREM = '''
@@ -97,6 +103,112 @@ class TestWebsiteCheck(unittest.TestCase):
         check.request()
         self.assertEqual(check.code, 200)
         self.assertEqual(check.valid, False)
+
+
+class TestDoRequest(unittest.TestCase):
+
+    @requests_mock.Mocker()
+    @patch('sys.stderr', new_callable=io.StringIO)
+    @patch('sys.stdout', new_callable=io.StringIO)
+    def test_onesite(self, m, fake_out, fake_err):
+        m.get('http://test.com', text='resp', status_code=200)
+
+        urls = ['http://test.com']
+        websites = [WebsiteCheck(u) for u in urls]
+
+        producer = MockProducer(
+            value_serializer=lambda m: json.dumps(m).encode('ascii'),
+        )
+
+        output = ''
+        response = do_request(websites, producer)
+        self.assertEqual(response, True)
+        output = fake_out.getvalue()
+
+        self.assertTrue('http://test.com' in output)
+
+    @requests_mock.Mocker()
+    @patch('sys.stderr', new_callable=io.StringIO)
+    @patch('sys.stdout', new_callable=io.StringIO)
+    def test_multisite(self, m, fake_out, fake_err):
+        urls = ['http://test.com', 'https://test2.com']
+
+        for url in urls:
+            m.get(url, text='resp', status_code=200)
+
+        websites = [WebsiteCheck(u) for u in urls]
+
+        producer = MockProducer(
+            value_serializer=lambda m: json.dumps(m).encode('ascii'),
+        )
+
+        output = ''
+        response = do_request(websites, producer)
+        self.assertEqual(response, True)
+        output = fake_out.getvalue()
+
+        self.assertTrue('http://test.com' in output)
+        self.assertTrue('https://test2.com' in output)
+
+    @requests_mock.Mocker()
+    @patch('sys.stderr', new_callable=io.StringIO)
+    @patch('sys.stdout', new_callable=io.StringIO)
+    def test_multisite_fail(self, m, fake_out, fake_err):
+        urls = ['http://test.com', 'https://test2.com']
+
+        m.get(urls[0], text='resp', status_code=200)
+        m.get(urls[1], exc=requests.exceptions.Timeout)
+
+        websites = [WebsiteCheck(u) for u in urls]
+
+        producer = MockProducer(
+            value_serializer=lambda m: json.dumps(m).encode('ascii'),
+        )
+
+        output = ''
+        response = do_request(websites, producer)
+        self.assertEqual(response, False)
+        output = fake_out.getvalue()
+
+        self.assertTrue('http://test.com' in output)
+        self.assertTrue('https://test2.com' not in output)
+
+    @requests_mock.Mocker()
+    @patch('sys.stderr', new_callable=io.StringIO)
+    @patch('sys.stdout', new_callable=io.StringIO)
+    def test_onesite_kafka_error(self, m, fake_out, fake_err):
+        m.get('http://test.com', text='resp', status_code=200)
+
+        urls = ['http://test.com']
+        websites = [WebsiteCheck(u) for u in urls]
+
+        producer = MockProducer(
+            fail=True,
+            value_serializer=lambda m: json.dumps(m).encode('ascii'),
+        )
+
+        output = ''
+        response = do_request(websites, producer)
+        self.assertEqual(response, True)
+        output = fake_err.getvalue()
+
+        self.assertTrue('Forced fail' in output)
+
+    @requests_mock.Mocker()
+    @patch('sys.stderr', new_callable=io.StringIO)
+    @patch('sys.stdout', new_callable=io.StringIO)
+    def test_onesite_error(self, m, fake_out, fake_err):
+        m.get('http://test.com', exc=requests.exceptions.Timeout)
+
+        urls = ['http://test.com']
+        websites = [WebsiteCheck(u) for u in urls]
+
+        producer = MockProducer(
+            value_serializer=lambda m: json.dumps(m).encode('ascii'),
+        )
+
+        response = do_request(websites, producer)
+        self.assertEqual(response, False)
 
 
 if __name__ == '__main__':
