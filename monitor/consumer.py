@@ -64,6 +64,18 @@ def store(db, data):
     db.commit()
 
 
+def consume(db, consumer):
+    '''
+    Consume all messages from the consumer and stores in the database
+    '''
+
+    # Listen to kafka events
+    for msg in consumer:
+        data = msg.value
+        print(f'\033[1;34m{data}\033[0;0m')
+        store(db, data)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Consume a kafa topic and stores in postgresql.')
@@ -89,12 +101,8 @@ if __name__ == '__main__':
         value_deserializer=lambda m: json.loads(m.decode('ascii')),
     )
 
-    # Listen to kafka events
     try:
-        for msg in consumer:
-            data = msg.value
-            print(f'\033[1;34m{data}\033[0;0m')
-            store(db, data)
-
+        consume(db, consumer)
     except KeyboardInterrupt:
+        db.close()
         sys.exit(0)

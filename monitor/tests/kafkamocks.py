@@ -17,6 +17,10 @@
 #
 
 
+import datetime
+import random
+
+
 def callback(*args):
     pass
 
@@ -74,3 +78,47 @@ class MockProducer:
             self.future.errback(Exception('Forced fail'))
         else:
             self.future.callback(self.data)
+
+
+class ConsumerData:
+    def __init__(self):
+        self.value = {
+            'time': random.randint(100, 10*1000*1000),
+            'code': random.choice([200, 404, 302]),
+            'request_time': datetime.datetime.now().isoformat(),
+            'valid': random.choice([True, False]),
+            'regex': '',
+            'url': f'http://test{random.randint(0, 10)}.com',
+        }
+
+
+class MockConsumer:
+    def __init__(self,
+                 topic,
+                 elements=100,
+                 bootstrap_servers=None,
+                 ssl_certfile='',
+                 ssl_keyfile='',
+                 ssl_cafile='',
+                 security_protocol='SSL',
+                 value_serializer=lambda m: m):
+
+        self.bootstrap_servers = bootstrap_servers
+        self.ssl_certfile = ssl_certfile
+        self.ssl_keyfile = ssl_keyfile
+        self.ssl_cafile = ssl_cafile
+        self.security_protocol = security_protocol
+        self.value_serializer = value_serializer
+
+        self.data = self._gen_fake_data(elements)
+
+    def __iter__(self):
+        return iter(self.data)
+
+    def _gen_fake_data(self, elements):
+        data = []
+        for i in range(elements):
+            website = ConsumerData()
+            data.append(website)
+
+        return data
