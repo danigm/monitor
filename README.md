@@ -41,9 +41,10 @@ python -m monitor.consumer
 
 To make it work you need a kafka instance with a kafka topic. By default it
 uses these files to authenticate:
-    * ca.pem
-    * service.cert
-    * service.key
+
+ * ca.pem
+ * service.cert
+ * service.key
 
 So you need to create those files to make this work.
 
